@@ -1,0 +1,14 @@
+# sso 登录页面测试案例
+# 使用 - 分隔测试用例
+
+-
+  username: admin
+  password: 0192023A7BBD73250516F069DF18B500
+
+-
+  username: user01
+  password: test
+
+-
+  username: EOIadmin
+  password: 0192023A7BBD73250516F069DF18B500
