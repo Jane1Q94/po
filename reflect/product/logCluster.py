@@ -1,25 +1,137 @@
-# 实现日志速析平台的聚类分析页面，包括实时聚类分析以及离线聚类分析页面
-import datetime
-import time
-
-from ddt import ddt, file_data
 import unittest
 from po.config import ProductConfig
-from po.BasePage import BasePage
+from po.utils.tools import datetime2timestamp
 
 
-@ddt
-class RealtimeClusterAnalysis(BasePage):
-
+class OfflineClusterAnalysis:
     @classmethod
-    def set_time(cls, date_time):
-        t = date_time.timetuple()
-        timestamp = int(time.mktime(t) * 1000.0 + date_time.microsecond / 1000.0)
-        return timestamp
+    def create_task(cls, **data):
+        # 必填项
+        name = data.get("name")
+        dataSource_addressId = data.get("addressId")
+        dataSource_to = datetime2timestamp(data.get("to"))
+        dataSource_form = datetime2timestamp(data.get("form"))
+        dataSource_index = data.get("index")
 
-    # 测试案例从 Login.yaml 文件中读取
-    @file_data("../case/ClusterAnalysis.yaml")
-    def test_createTask(self, **data):
+        # 扩展配置
+        advanceConfig_anomalyIndexShards = data.get("anomalyIndexShards", 1)
+        advanceConfig_dsGroups = data.get("dsGroups", [])
+        advanceConfig_esIndexPattern = data.get("esIndexPattern", "unique")
+        advanceConfig_executorNumber = data.get("executorNumber", 1)
+        advanceConfig_logIndexShards = data.get("logIndexShards", 3)
+        advanceConfig_outputVars = data.get("outputVars", False)
+        advanceConfig_persistOption = data.get("persistOption", True)
+        advanceConfig_spl = data.get("spl", "")
+        advanceConfig_taskManagerMem = data.get("taskManagerMem", 2048)
+        advanceConfig_contextField = data.get("contextField", "@rownumber")
+        advanceConfig_contextFilterFields = data.get("contextFilterFields", "@path,@hostname")
+
+        # 聚类设置
+        aggregationConfig_enable = data.get("enable", True)
+        aggregationConfig_windows = data.get("windows", 5)  # 聚类窗口 5 分钟
+
+        # 关注模板
+        attentionTemplates = data.get("attentionTemplates", [])
+
+        # 聚类配置
+        clusterConfig_format_rule = data.get("format_rule", "<content##[\s\S]*>")
+        clusterConfig_replace_rule = data.get("replace_rule", [
+            {'from': '\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', 'to': '$DateTime'},
+            {'from': 'https?://[^\s]+', 'to': '$URL'},
+            {'from': '\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}', 'to': '$IPPort'},
+            {'from': '\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', 'to': '$IP'},
+            {'from': '(^|(?<=[^a-zA-Z\d\.]))\d+\.\d+(?=(\.?($|\s)|[^a-zA-Z\d\.]))',
+             'to': '$NumFloat'}])
+        clusterConfig_seperator_type = data.get("type", "RegExp")
+        clusterConfig_seperator_value = data.get("value", "[^\w\u4e00-\u9fff\-/@]+")
+        clusterConfig_keyword_type = data.get("type", "String")
+        clusterConfig_keyword_value = data.get("value", "")
+        clusterConfig_truncation = data.get("truncation", 100)
+        clusterConfig_similarity = data.get("similarity", 0.5)
+        clusterConfig_token_filter_ignore_digit = data.get("ignore_digit", False)
+        clusterConfig_token_filter_ignore_replace_rule = data.get("ignore_replace_rule", False)
+
+        # CMDB
+        cmdbInfo_serviceName = data.get("serviceName", "")
+        cmdbInfo_serviceId = data.get("serviceId", "")
+        cmdbInfo_field = data.get("field", "")
+        cmdbInfo_type = data.get("type", "dynamic")
+
+        # 数据源
+        dataSource_fieldName = data.get("fieldName", "@message")
+        dataSource_previewCount = data.get("previewCount", 0)
+        dataSource_timeField = data.get("timeField", "@timestamp")
+        dataSource_timeFormat = data.get("timeFormat", "yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+        dataSource_timeZone = data.get("timeZone", "GMT+08:00")
+        dataSource_type = data.get("type", "Elasticsearch")
+        description = data.get("description", "this task created by auto test program")
+        dataSource_sourceId = data.get("sourceId", 0)
+
+        payload = {
+            "advanceConfig": {
+                "anomalyIndexShards": advanceConfig_anomalyIndexShards,
+                "dsGroups": advanceConfig_dsGroups,
+                "esIndexPattern": advanceConfig_esIndexPattern,
+                "executorNumber": advanceConfig_executorNumber,
+                "logIndexShards": advanceConfig_logIndexShards,
+                "outputVars": advanceConfig_outputVars,
+                "persistOption": advanceConfig_persistOption,
+                "spl": advanceConfig_spl,
+                "taskManagerMem": advanceConfig_taskManagerMem,
+                "contextField": advanceConfig_contextField,
+                "contextFilterFields": advanceConfig_contextFilterFields
+            },
+            "aggregationConfig": {
+                "enable": aggregationConfig_enable,
+                "windows": aggregationConfig_windows
+            },
+            "attentionTemplates": attentionTemplates,
+            "clusterConfig": {
+                "format_rule": clusterConfig_format_rule,
+                "replace_rule": clusterConfig_replace_rule,
+                "seperator": {
+                    "type": clusterConfig_seperator_type,
+                    "value": clusterConfig_seperator_value
+                },
+                "keyword": {
+                    "type": clusterConfig_keyword_type,
+                    "value": clusterConfig_keyword_value
+                },
+                "truncation": clusterConfig_truncation,
+                "similarity": clusterConfig_similarity,
+                "token_filter": {
+                    "ignore_digit": clusterConfig_token_filter_ignore_digit,
+                    "ignore_replace_rule": clusterConfig_token_filter_ignore_replace_rule
+                }
+            },
+            "cmdbInfo": {
+                "serviceName": cmdbInfo_serviceName,
+                "serviceId": cmdbInfo_serviceId,
+                "field": cmdbInfo_field,
+                "type": cmdbInfo_type
+            },
+            "dataSource": {
+                "fieldName": dataSource_fieldName,
+                "form": dataSource_form,
+                "index": dataSource_index,
+                "previewCount": dataSource_previewCount,
+                "sourceId": dataSource_sourceId,
+                "timeField": dataSource_timeField,
+                "timeFormat": dataSource_timeFormat,
+                "timeZone": dataSource_timeZone,
+                "to": dataSource_to,
+                "type": dataSource_type,
+                "addressId": dataSource_addressId
+            },
+            "description": description,
+            "name": name
+        }
+        print(payload)
+
+
+class RealtimeClusterAnalysis:
+    @classmethod
+    def create_task(cls, **data):
         # 必填项
         dataSource_topic = data.get("topic")
         dataSource_addressId = data.get("addressId")
@@ -112,7 +224,8 @@ class RealtimeClusterAnalysis(BasePage):
         detectionConfig_featureDetectionConfig_guardEnable = data.get("guardEnable", False)
         detectionConfig_featureDetectionConfig_guardLogThreshold = data.get("guardLogThreshold", 10000)
         detectionConfig_featureDetectionConfig_guardMinute = data.get("guardMinute", 10)
-        detectionConfig_featureDetectionConfig_startTime = data.get("startTime", self.set_time(datetime.datetime.now()))
+        detectionConfig_featureDetectionConfig_startTime = data.get("startTime",
+                                                                    datetime2timestamp(datetime.datetime.now()))
         detectionConfig_featureDetectionConfig_suddenDownEnable = data.get("suddenDownEnable", True)
         detectionConfig_featureDetectionConfig_suddenDownExtremumEnable = data.get("suddenDownExtremumEnable", True)
         detectionConfig_featureDetectionConfig_suddenDownFixedEnable = data.get("suddenDownFixedEnable", True)
@@ -133,11 +246,11 @@ class RealtimeClusterAnalysis(BasePage):
         detectionConfig_featureDetectionConfig_windows = data.get("windows", 5)
         detectionConfig_neverEnable = data.get("neverEnable", True)
         detectionConfig_noLogEnable = data.get("noLogEnable", True)
-        detectionConfig_noLogStartTime = data.get("noLogStartTime", self.set_time(datetime.datetime.now()))
+        detectionConfig_noLogStartTime = data.get("noLogStartTime", datetime2timestamp(datetime.datetime.now()))
         detectionConfig_noLogThreshold = data.get("noLogThreshold", 10)
         detectionConfig_novelDays = data.get("novelDays", 7)
         detectionConfig_novelDaysEnable = data.get("novelDaysEnable", True)
-        detectionConfig_novelStartTime = data.get("novelStartTime", self.set_time(datetime.datetime.now()))
+        detectionConfig_novelStartTime = data.get("novelStartTime", datetime2timestamp(datetime.datetime.now()))
 
         # 训练配置
         trainConfig_separate = data.get("separate", 1)  # 时间段分隔,单位为小时
